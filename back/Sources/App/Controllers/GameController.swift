@@ -7,6 +7,8 @@ struct GameController: RouteCollection {
         games.get(use: index)
         games.post(use: create)
         games.get(":gameID", use: show)
+        games.put(":gameID", use: update)
+        games.delete(":gameID", use: delete)
     }
 
     @Sendable
@@ -48,5 +50,36 @@ struct GameController: RouteCollection {
             throw Abort(.notFound, reason: "Game not found")
         }
         return game
+    }
+
+    @Sendable
+    func update(req: Request) async throws -> GameDTO {
+        try CreateGameDTO.validate(content: req)
+        let dto = try req.content.decode(CreateGameDTO.self)
+        try dto.ensureConsistentPlayerCount()
+
+        let game = try await findGame(req)
+
+        game.title = dto.title
+        game.minPlayers = dto.minPlayers
+        game.maxPlayers = dto.maxPlayers
+        game.durationMinutes = dto.durationMinutes
+
+        try await game.save(on: req.db)
+
+        return game.toDTO()
+    }
+
+    @Sendable
+    func delete(req: Request) async throws -> Response {
+        let game = try await findGame(req)
+
+        guard game.loans.isEmpty else {
+            throw Abort(.conflict, reason: "Cannot delete a game with loan history")
+        }
+
+        try await game.delete(on: req.db)
+
+        return Response(status: .noContent)
     }
 }
