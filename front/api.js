@@ -40,7 +40,7 @@ const knownMessages = {
     "Suppression impossible : cet·te adhérent·e a un historique d'emprunts, conservé même quand tout est rendu.",
   "A member with this email already exists": "Un·e autre adhérent·e utilise déjà cette adresse e-mail.",
   "Cannot delete a game with loan history":
-  "Suppression impossible : ce jeu possède un historique d'emprunts.",
+  "Suppression impossible : ce jeu possède un historique d'emprunts."
 };
 
 // Les erreurs de validation de Vapor arrivent regroupées :
@@ -116,6 +116,8 @@ export const api = {
 
   listMembers: () => request("GET", "/members"),
   createMember: (member) => request("POST", "/members", member),
+  updateMember: (id, member) => request("PUT", `/members/${id}`, member),
+  deleteMember: (id) => request("DELETE", `/members/${id}`),
 
   borrow: (gameID, memberID) => request("POST", "/loans", { gameID, memberID }),
 };

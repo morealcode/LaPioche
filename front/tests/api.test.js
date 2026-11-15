@@ -82,6 +82,29 @@ test("deleteGame sends DELETE", async () => {
   assertEqual(calls[0].path, "/games/g1");
 });
 
+test("updateMember sends a JSON PUT", async () => {
+  const { fetch, calls } = fakeApi({
+    "PUT /members/m1": { id: "m1", name: "Camille", email: "camille@example.com" },
+  });
+
+  const member = { name: "Camille", email: "camille@example.com" };
+
+  await withFakeFetch(fetch, () => api.updateMember("m1", member));
+
+  assertEqual(calls[0].method, "PUT");
+  assertEqual(calls[0].path, "/members/m1");
+  assertEqual(calls[0].body, member);
+});
+
+test("deleteMember sends DELETE", async () => {
+  const { fetch, calls } = fakeApi({ "DELETE /members/m1": [204] });
+
+  await withFakeFetch(fetch, () => api.deleteMember("m1"));
+
+  assertEqual(calls[0].method, "DELETE");
+  assertEqual(calls[0].path, "/members/m1");
+});
+
 // --- erreurs
 
 // Attend qu'une promesse échoue et renvoie l'erreur (échoue si elle réussit).

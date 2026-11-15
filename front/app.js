@@ -230,24 +230,91 @@ async function loadMembers() {
 }
 
 function memberRow(member) {
+  const actions = el("div", { class: "actions" });
+
+  actions.append(
+    button("Modifier", () => openEditMemberDialog(member)),
+    button("Supprimer", () => openDeleteMemberDialog(member), "danger"),
+  );
+
   return el(
     "li",
     { class: "row" },
-    el("div", { class: "row-main" }, el("p", {}, el("strong", {}, member.name)), el("p", { class: "meta" }, member.email)),
+    el(
+      "div",
+      { class: "row-main" },
+      el("p", {}, el("strong", {}, member.name)),
+      el("p", { class: "meta" }, member.email),
+    ),
+    actions,
   );
 }
 
 const memberDialog = $("#member-dialog");
 const memberForm = $("#member-form");
+const memberDialogTitle = $("h2", memberForm);
+
+let editingMember = null;
 
 $("#add-member").addEventListener("click", () => {
+  editingMember = null;
   memberForm.reset();
+  memberDialogTitle.textContent = "Ajouter un·e adhérent·e";
   showFormError(memberDialog, null);
   memberDialog.showModal();
 });
 
-bindSubmit(memberDialog, memberForm, (data) =>
-  api.createMember({ name: data.get("name").trim(), email: data.get("email").trim() }),
-);
+function openEditMemberDialog(member) {
+  editingMember = member;
+
+  memberForm.elements.name.value = member.name;
+  memberForm.elements.email.value = member.email;
+
+  memberDialogTitle.textContent = "Modifier un·e adhérent·e";
+  showFormError(memberDialog, null);
+  memberDialog.showModal();
+}
+
+bindSubmit(memberDialog, memberForm, (data) => {
+  const payload = {
+    name: data.get("name").trim(),
+    email: data.get("email").trim(),
+  };
+
+  return editingMember
+    ? api.updateMember(editingMember.id, payload)
+    : api.createMember(payload);
+});
+
+const deleteMemberDialog = $("#delete-member-dialog");
+const deleteMemberForm = $("#delete-member-form");
+
+let deletingMember = null;
+
+function openDeleteMemberDialog(member) {
+  deletingMember = member;
+
+  $("#delete-member-message").textContent =
+    `Voulez-vous vraiment supprimer l'adhérent·e « ${member.name} » ?`;
+
+  showFormError(deleteMemberDialog, null);
+  deleteMemberDialog.showModal();
+}
+
+deleteMemberForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  showFormError(deleteMemberDialog, null);
+
+  try {
+    await api.deleteMember(deletingMember.id);
+    deleteMemberDialog.close();
+    deletingMember = null;
+    await refresh();
+    toast("L'adhérent·e a bien été supprimé·e.");
+  } catch (error) {
+    showFormError(deleteMemberDialog, error);
+  }
+});
 
 refresh();

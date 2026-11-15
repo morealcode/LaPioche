@@ -87,7 +87,7 @@ struct MemberController: RouteCollection {
         let loanCount = try await member.$loans.query(on: req.db).count()
 
         guard loanCount == 0 else {
-            throw Abort(.conflict, reason: "Cannot delete a member with loan history")
+            throw Abort(.conflict, reason: "A member with loans cannot be deleted")
         }
 
         try await member.delete(on: req.db)
