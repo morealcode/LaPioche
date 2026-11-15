@@ -65,6 +65,75 @@ test("a validation error is shown in French and the dialog stays open", async ()
   assertTrue(app.$("#game-dialog").open, "la boîte devrait rester ouverte");
 });
 
+test("editing a game sends a PUT request", async () => {
+  const updatedGame = { ...catan, title: "Catan édition spéciale" };
+
+  const app = await mountApp({
+    "GET /games": [catan],
+    "PUT /games/g1": updatedGame,
+  });
+
+  await waitFor(() => app.$$("#games-list .card").length === 1);
+
+  app.click("Modifier", cardOf(app, "Catan"));
+
+  const form = app.$("#game-form");
+  assertEqual(form.elements.title.value, "Catan");
+
+  form.elements.title.value = "Catan édition spéciale";
+  form.requestSubmit();
+
+  await waitFor(
+    () => app.calls.some((call) => call.method === "PUT" && call.path === "/games/g1"),
+    "l'appel PUT /games/g1",
+  );
+
+  assertEqual(
+    app.calls.find((call) => call.method === "PUT").body,
+    {
+      title: "Catan édition spéciale",
+      minPlayers: 3,
+      maxPlayers: 4,
+      durationMinutes: 90,
+    },
+  );
+
+  await waitFor(() => !app.$("#game-dialog").open, "la boîte de modification se ferme");
+});
+
+test("a deletion refusal is displayed in French", async () => {
+  const app = await mountApp({
+    "GET /games": [catan],
+    "DELETE /games/g1": [
+      409,
+      { error: true, reason: "A game with loans cannot be deleted" },
+    ],
+  });
+
+  await waitFor(() => app.$$("#games-list .card").length === 1);
+
+  app.click("Supprimer", cardOf(app, "Catan"));
+
+  await waitFor(() => app.$("#delete-game-dialog").open, "la confirmation de suppression");
+
+  app.$("#delete-game-form").requestSubmit();
+
+  await waitFor(
+    () => !app.$("#delete-game-dialog .form-error").hidden,
+    "le message de refus",
+  );
+
+  assertEqual(
+    app.$("#delete-game-dialog .form-error").textContent,
+    "Suppression impossible : ce jeu a un historique d'emprunts, conservé même quand le jeu est rendu.",
+  );
+
+  assertTrue(
+    app.$("#delete-game-dialog").open,
+    "la boîte de confirmation devrait rester ouverte",
+  );
+});
+
 // --- Emprunts
 
 test("borrowing a game sends the game and the chosen member", async () => {

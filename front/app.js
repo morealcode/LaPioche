@@ -103,6 +103,12 @@ function gameCard(game) {
     : el("span", { class: "badge busy" }, "Emprunté");
 
   const actions = el("div", { class: "actions" });
+
+  actions.append(
+    button("Modifier", () => openEditGameDialog(game)),
+    button("Supprimer", () => openDeleteGameDialog(game), "danger"),
+  );
+
   if (game.isAvailable) {
     actions.append(button("Emprunter", () => openBorrowDialog(game), "primary"));
   }
@@ -118,21 +124,74 @@ function gameCard(game) {
 
 const gameDialog = $("#game-dialog");
 const gameForm = $("#game-form");
+const gameDialogTitle = $("h2", gameForm);
+
+let editingGame = null;
 
 $("#add-game").addEventListener("click", () => {
+  editingGame = null;
   gameForm.reset();
+  gameDialogTitle.textContent = "Ajouter un jeu";
   showFormError(gameDialog, null);
   gameDialog.showModal();
 });
 
-bindSubmit(gameDialog, gameForm, (data) =>
-  api.createGame({
+function openEditGameDialog(game) {
+  editingGame = game;
+
+  gameForm.elements.title.value = game.title;
+  gameForm.elements.minPlayers.value = game.minPlayers;
+  gameForm.elements.maxPlayers.value = game.maxPlayers;
+  gameForm.elements.durationMinutes.value = game.durationMinutes;
+
+  gameDialogTitle.textContent = "Modifier un jeu";
+  showFormError(gameDialog, null);
+  gameDialog.showModal();
+}
+
+bindSubmit(gameDialog, gameForm, (data) => {
+  const payload = {
     title: data.get("title").trim(),
     minPlayers: Number(data.get("minPlayers")),
     maxPlayers: Number(data.get("maxPlayers")),
     durationMinutes: Number(data.get("durationMinutes")),
-  }),
-);
+  };
+
+  return editingGame
+    ? api.updateGame(editingGame.id, payload)
+    : api.createGame(payload);
+});
+
+const deleteGameDialog = $("#delete-game-dialog");
+const deleteGameForm = $("#delete-game-form");
+
+let deletingGame = null;
+
+function openDeleteGameDialog(game) {
+  deletingGame = game;
+
+  $("#delete-game-message").textContent =
+    `Voulez-vous vraiment supprimer « ${game.title} » ?`;
+
+  showFormError(deleteGameDialog, null);
+  deleteGameDialog.showModal();
+}
+
+deleteGameForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+
+  showFormError(deleteGameDialog, null);
+
+  try {
+    await api.deleteGame(deletingGame.id);
+    deleteGameDialog.close();
+    deletingGame = null;
+    await refresh();
+    toast("Le jeu a bien été supprimé.");
+  } catch (error) {
+    showFormError(deleteGameDialog, error);
+  }
+});
 
 // --- Emprunts --------------------------------------------------------------
 

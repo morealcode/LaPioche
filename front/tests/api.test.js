@@ -24,6 +24,13 @@ test("translateError never lets unknown English through", () => {
   assertEqual(translateError(418, "teapot"), "Une erreur est survenue. Réessayez.");
 });
 
+test("translateError translates a game deletion refusal", () => {
+  assertEqual(
+    translateError(409, "A game with loans cannot be deleted"),
+    "Suppression impossible : ce jeu a un historique d'emprunts, conservé même quand le jeu est rendu.",
+  );
+});
+
 // --- requêtes envoyées à l'API
 
 test("listGames calls GET /games", async () => {
@@ -45,6 +52,34 @@ test("borrow sends the game and the member", async () => {
   const { fetch, calls } = fakeApi({ "POST /loans": [201, { id: "l1" }] });
   await withFakeFetch(fetch, () => api.borrow("g1", "m1"));
   assertEqual(calls[0].body, { gameID: "g1", memberID: "m1" });
+});
+
+test("updateGame sends a JSON PUT", async () => {
+  const { fetch, calls } = fakeApi({
+    "PUT /games/g1": { id: "g1", title: "Dixit" },
+  });
+
+  const game = {
+    title: "Dixit",
+    minPlayers: 3,
+    maxPlayers: 6,
+    durationMinutes: 30,
+  };
+
+  await withFakeFetch(fetch, () => api.updateGame("g1", game));
+
+  assertEqual(calls[0].method, "PUT");
+  assertEqual(calls[0].path, "/games/g1");
+  assertEqual(calls[0].body, game);
+});
+
+test("deleteGame sends DELETE", async () => {
+  const { fetch, calls } = fakeApi({ "DELETE /games/g1": [204] });
+
+  await withFakeFetch(fetch, () => api.deleteGame("g1"));
+
+  assertEqual(calls[0].method, "DELETE");
+  assertEqual(calls[0].path, "/games/g1");
 });
 
 // --- erreurs
