@@ -437,4 +437,107 @@ final class GameTests: XCTestCase {
             }
         }
     }
+
+    func testListAvailableGames() async throws {
+        try await withApp { app in
+            let availableGame = try await createGame(
+                app,
+                title: "Catan"
+            )
+
+            let unavailableGame = try await createGame(
+                app,
+                title: "Dixit"
+            )
+
+            let member = try await createMember(app)
+
+            let now = Date()
+            let dueAt = Calendar.current.date(
+                byAdding: .day,
+                value: 14,
+                to: now
+            )!
+
+            try await insertLoan(
+                app,
+                gameID: try XCTUnwrap(unavailableGame.id),
+                memberID: try XCTUnwrap(member.id),
+                borrowedAt: now,
+                dueAt: dueAt
+            )
+
+            try await app.test(
+                .GET,
+                "games?available=true",
+                afterResponse: { res async throws in
+                    XCTAssertEqual(res.status, .ok)
+
+                    let games = try res.content.decode([GameDTO].self)
+
+                    XCTAssertEqual(games.count, 1)
+                    XCTAssertEqual(games.first?.id, availableGame.id)
+                    XCTAssertTrue(games.first?.isAvailable ?? false)
+                }
+            )
+        }
+    }
+
+    func testListUnavailableGames() async throws {
+        try await withApp { app in
+            _ = try await createGame(app, title: "Catan")
+
+            let unavailableGame = try await createGame(
+                app,
+                title: "Dixit"
+            )
+
+            let member = try await createMember(app)
+
+            let now = Date()
+            let dueAt = Calendar.current.date(
+                byAdding: .day,
+                value: 14,
+                to: now
+            )!
+
+            try await insertLoan(
+                app,
+                gameID: try XCTUnwrap(unavailableGame.id),
+                memberID: try XCTUnwrap(member.id),
+                borrowedAt: now,
+                dueAt: dueAt
+            )
+
+            try await app.test(
+                .GET,
+                "games?available=false",
+                afterResponse: { res async throws in
+                    XCTAssertEqual(res.status, .ok)
+
+                    let games = try res.content.decode([GameDTO].self)
+
+                    XCTAssertEqual(games.count, 1)
+                    XCTAssertEqual(games.first?.id, unavailableGame.id)
+                    XCTAssertFalse(games.first?.isAvailable ?? true)
+                }
+            )
+        }
+    }
+
+    func testListGamesWithInvalidAvailableReturnsBadRequest() async throws {
+        let invalidValues = ["yes", "no", "1", "0", "TRUE", "False", ""]
+
+        for value in invalidValues {
+            try await withApp { app in
+                try await app.test(
+                    .GET,
+                    "games?available=\(value)",
+                    afterResponse: { res async throws in
+                        XCTAssertEqual(res.status, .badRequest)
+                    }
+                )
+            }
+        }
+    }
 }

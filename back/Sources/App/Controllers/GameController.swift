@@ -50,8 +50,30 @@ struct GameController: RouteCollection {
             gamesQuery = gamesQuery.filter(\.$durationMinutes <= duration)
         }
 
+        if let available = query.available {
+            guard available == "true" || available == "false" else {
+                throw Abort(
+                    .badRequest,
+                    reason: "available must be true or false"
+                )
+            }
+        }
+
         let games = try await gamesQuery.all()
-        return games.map { $0.toDTO() }
+
+        let filteredGames = games.filter { game in
+            guard let available = query.available else {
+                return true
+            }
+
+            let isAvailable = game.loans.allSatisfy {
+                $0.returnedAt != nil
+            }
+
+            return isAvailable == (available == "true")
+        }
+
+        return filteredGames.map { $0.toDTO() }
     }
 
     @Sendable
