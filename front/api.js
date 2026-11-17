@@ -125,4 +125,6 @@ export const api = {
   listMemberLoans: (memberID) => request("GET", `/members/${memberID}/loans`),
 
   returnLoan: (loanID) => request("POST", `/loans/${loanID}/return`),
+
+  listOverdueLoans: () => request("GET", "/loans/overdue"),
 };

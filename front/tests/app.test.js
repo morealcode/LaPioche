@@ -297,6 +297,101 @@ test("a failed return is displayed in French", async () => {
   );
 });
 
+test("overdue tab displays the late loan with game, member, due date and delay", async () => {
+  const dueAt = new Date(
+    Date.now() - 5 * 24 * 60 * 60 * 1000
+  ).toISOString();
+
+  const overdueLoan = {
+    id: "l1",
+    gameID: "g1",
+    memberID: "m1",
+    borrowedAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000).toISOString(),
+    dueAt,
+    returnedAt: null,
+  };
+
+  const app = await mountApp({
+    "GET /loans/overdue": [overdueLoan],
+    "GET /games": [catan],
+    "GET /members": [camille],
+  }, { hash: "#overdue" });
+
+  await waitFor(
+    () => app.$$("#overdue-list .loan-row").length === 1,
+    "l'emprunt en retard devrait être affiché"
+  );
+
+  const content = app.$("#overdue-list").textContent;
+
+  // Le titre du jeu doit apparaître.
+  assertIncludes(content, "Catan");
+
+  // Le nom de l'adhérente doit apparaître.
+  assertIncludes(content, "Camille");
+
+  // La date de retour prévue doit apparaître.
+  const expectedDate = new Intl.DateTimeFormat("fr-FR", {
+    dateStyle: "long",
+  }).format(new Date(dueAt));
+
+  assertIncludes(content, expectedDate);
+
+  // Le retard doit être indiqué par un texte contenant un nombre de jours.
+  assertTrue(
+    /En retard de \d+ jours?/.test(content),
+    "le nombre de jours de retard devrait être affiché"
+  );
+
+  // Le compteur doit indiquer un emprunt en retard.
+  assertEqual(app.$("#overdue-count").textContent, "1");
+
+  // Le signalement ne doit pas reposer uniquement sur la couleur.
+  assertIncludes(content, "En retard");
+
+  // La bonne route doit avoir été appelée.
+  assertTrue(
+    app.calls.some(
+      (call) =>
+        call.method === "GET" &&
+        call.path === "/loans/overdue"
+    ),
+    "la route des emprunts en retard devrait être appelée"
+  );
+});
+
+test("overdue tab displays an empty message when there are no late loans", async () => {
+  const app = await mountApp({
+    "GET /loans/overdue": [],
+    "GET /games": [catan],
+    "GET /members": [camille],
+  }, { hash: "#overdue" });
+
+  await waitFor(
+    () => !app.$("#overdue-empty").hidden,
+    "le message indiquant l'absence de retard"
+  );
+
+  // Un message explicite doit être affiché.
+  assertIncludes(
+    app.$("#overdue-empty").textContent,
+    "Aucun emprunt en retard"
+  );
+
+  // Aucun emprunt ne doit apparaître.
+  assertEqual(
+    app.$$("#overdue-list .loan-row").length,
+    0,
+    "la liste des retards devrait être vide"
+  );
+
+  // Le compteur doit être à zéro.
+  assertEqual(
+    app.$("#overdue-count").textContent,
+    "0"
+  );
+});
+
 // --- Adhérent·es
 
 test("members tab lists the members", async () => {

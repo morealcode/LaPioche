@@ -69,7 +69,7 @@ function bindSubmit(dialog, form, handler) {
 
 // --- Onglets ---------------------------------------------------------------
 
-const tabs = ["games", "members"];
+const tabs = ["games", "members", "overdue"];
 
 function currentTab() {
   const name = location.hash.slice(1);
@@ -78,11 +78,29 @@ function currentTab() {
 
 async function refresh() {
   const tab = currentTab();
+
   for (const name of tabs) {
     $(`#${name}`).hidden = name !== tab;
-    $(`[data-tab="${name}"]`).toggleAttribute("aria-current", name === tab);
+
+    $(`[data-tab="${name}"]`).toggleAttribute(
+      "aria-current",
+      name === tab
+    );
   }
-  await run(tab === "games" ? loadGames : loadMembers);
+
+  await run(
+    tab === "games"
+      ? loadGames
+      : tab === "members"
+        ? loadMembers
+        : loadOverdue
+  );
+
+  // Le compteur reste actualisé même lorsque la vue Retards
+  // n'est pas ouverte.
+  if (tab !== "overdue") {
+    await run(loadOverdueCount);
+  }
 }
 
 window.addEventListener("hashchange", refresh);
@@ -277,6 +295,95 @@ function getLoanStatus(loan, now = new Date()) {
     label: "En cours",
     className: "active",
   };
+}
+
+async function loadOverdue() {
+  const [loans, games, members] = await Promise.all([
+    api.listOverdueLoans(),
+    api.listGames(),
+    api.listMembers(),
+  ]);
+
+  const gamesById = new Map(
+    games.map((game) => [game.id, game])
+  );
+
+  const membersById = new Map(
+    members.map((member) => [member.id, member])
+  );
+
+  const now = Date.now();
+
+  const rows = loans.map((loan) => {
+    const game = gamesById.get(loan.gameID);
+    const member = membersById.get(loan.memberID);
+
+    const daysLate = Math.max(
+      1,
+      Math.ceil(
+        (now - new Date(loan.dueAt).getTime()) /
+        (1000 * 60 * 60 * 24)
+      )
+    );
+
+    return el(
+      "li",
+      { class: "loan-row row late" },
+
+      el(
+        "div",
+        { class: "loan-main" },
+
+        el(
+          "p",
+          { class: "loan-title" },
+          game?.title ?? "Jeu introuvable"
+        ),
+
+        el(
+          "p",
+          {},
+          `Adhérent·e : ${member?.name ?? "Adhérent·e introuvable"}`
+        ),
+
+        el(
+          "p",
+          { class: "loan-dates" },
+          `Retour prévu le : ${formatDate(loan.dueAt)}`
+        )
+      ),
+
+      el(
+        "span",
+        { class: "loan-status overdue" },
+        `En retard de ${daysLate} jour${daysLate > 1 ? "s" : ""}`
+      )
+    );
+  });
+
+  $("#overdue-list").replaceChildren(...rows);
+
+  $("#overdue-empty").hidden = loans.length > 0;
+
+  // Actualisation du compteur dans la navigation.
+  const counter = $("#overdue-count");
+  counter.textContent = loans.length;
+  counter.setAttribute(
+    "aria-label",
+    `${loans.length} emprunt${loans.length > 1 ? "s" : ""} en retard`
+  );
+}
+
+async function loadOverdueCount() {
+  const loans = await api.listOverdueLoans();
+
+  const counter = $("#overdue-count");
+
+  counter.textContent = loans.length;
+  counter.setAttribute(
+    "aria-label",
+    `${loans.length} emprunt${loans.length > 1 ? "s" : ""} en retard`
+  );
 }
 
 // --- Consultation des emprunts d'un·e adhérent·e ----------------------------

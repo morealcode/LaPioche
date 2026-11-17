@@ -127,6 +127,20 @@ test("returnLoan calls POST /loans/:loanID/return", async () => {
   assertEqual(calls[0].path, "/loans/l1/return");
 });
 
+test("listOverdueLoans calls GET /loans/overdue", async () => {
+  const loan = { id: "l1", gameID: "g1", memberID: "m1" };
+
+  const { fetch, calls } = fakeApi({
+    "GET /loans/overdue": [loan],
+  });
+
+  const loans = await withFakeFetch(fetch, () => api.listOverdueLoans());
+
+  assertEqual(calls[0].method, "GET");
+  assertEqual(calls[0].path, "/loans/overdue");
+  assertEqual(loans, [loan]);
+});
+
 // --- erreurs
 
 // Attend qu'une promesse échoue et renvoie l'erreur (échoue si elle réussit).
