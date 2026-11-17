@@ -111,6 +111,8 @@ function gameCard(game) {
 
   if (game.isAvailable) {
     actions.append(button("Emprunter", () => openBorrowDialog(game), "primary"));
+  } else {
+    actions.append(button("Rendre", () => returnGame(game), "primary"));
   }
 
   return el(
@@ -220,6 +222,40 @@ bindSubmit(borrowDialog, borrowForm, async (data) => {
   const loan = await api.borrow(borrowedGame.id, data.get("memberID"));
   toast(`« ${borrowedGame.title} » emprunté, à rendre avant le ${formatDate(loan.dueAt)}.`);
 });
+
+async function returnGame(game) {
+  await run(async () => {
+    // Récupérer tous les adhérents.
+    const members = await api.listMembers();
+
+    // Récupérer les emprunts de chaque adhérent.
+    const loansByMember = await Promise.all(
+      members.map((member) => api.listMemberLoans(member.id))
+    );
+
+    // Retrouver l'emprunt actif correspondant au jeu.
+    const loan = loansByMember
+      .flat()
+      .find(
+        (loan) =>
+          loan.gameID === game.id &&
+          loan.returnedAt == null
+      );
+
+    if (!loan || !loan.id) {
+      throw new Error("Aucun emprunt en cours n'a été trouvé pour ce jeu.");
+    }
+
+    // Effectuer le retour.
+    await api.returnLoan(loan.id);
+
+    // Actualiser les jeux sans recharger la page.
+    await refresh();
+
+    // Confirmer le retour.
+    toast(`« ${game.title} » a bien été rendu.`);
+  });
+}
 
 // --- Adhérent·es -----------------------------------------------------------
 

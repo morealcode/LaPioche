@@ -29,6 +29,7 @@ const knownMessages = {
   "Game not found": "Ce jeu n'existe pas ou a déjà été supprimé.",
   "Member not found": "Cet·te adhérent·e n'existe pas ou a déjà été supprimé·e.",
   "Loan not found": "Cet emprunt n'existe pas.",
+  "Loan has already been returned": "Cet emprunt a déjà été rendu.",
   "Invalid game id": "L'identifiant du jeu n'est pas valide.",
   "Invalid member id": "L'identifiant de l'adhérent·e n'est pas valide.",
   "Invalid loan id": "L'identifiant de l'emprunt n'est pas valide.",
@@ -120,4 +121,8 @@ export const api = {
   deleteMember: (id) => request("DELETE", `/members/${id}`),
 
   borrow: (gameID, memberID) => request("POST", "/loans", { gameID, memberID }),
+
+  listMemberLoans: (memberID) => request("GET", `/members/${memberID}/loans`),
+
+  returnLoan: (loanID) => request("POST", `/loans/${loanID}/return`),
 };

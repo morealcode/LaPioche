@@ -17,12 +17,37 @@ test("games list shows one card per game with its availability", async () => {
   assertIncludes(cardOf(app, "Catan").textContent, "3 à 4 joueur·ses · 90 min");
 });
 
-test("only an available game offers Borrow", async () => {
+/*test("only an available game offers Borrow", async () => {
   const app = await mountApp({ "GET /games": [catan, dixit] });
   await waitFor(() => app.$$("#games-list .card").length === 2);
   const labels = (title) => [...cardOf(app, title).querySelectorAll("button")].map((button) => button.textContent);
   assertTrue(labels("Catan").includes("Emprunter"), "Catan devrait proposer Emprunter");
   assertTrue(!labels("Dixit").includes("Emprunter"), "Dixit est emprunté, il ne doit pas proposer Emprunter");
+});*/
+
+test("available games offer Borrow and borrowed games offer Return", async () => {
+  const app = await mountApp({ "GET /games": [catan, dixit] });
+
+  await waitFor(() => app.$$("#games-list .card").length === 2);
+
+  const labels = (title) =>
+    [...cardOf(app, title).querySelectorAll("button")]
+      .map((button) => button.textContent);
+
+  assertTrue(
+    labels("Catan").includes("Emprunter"),
+    "Catan devrait proposer Emprunter"
+  );
+
+  assertTrue(
+    labels("Dixit").includes("Rendre"),
+    "Dixit devrait proposer Rendre"
+  );
+
+  assertTrue(
+    !labels("Dixit").includes("Emprunter"),
+    "Dixit ne devrait pas proposer Emprunter"
+  );
 });
 
 test("with no game, a message invites to add one", async () => {
@@ -157,6 +182,119 @@ test("borrowing without any member explains that one must be added first", async
   app.click("Emprunter", cardOf(app, "Catan"));
   await waitFor(() => app.$("#toasts").textContent.includes("Ajoutez d'abord"), "le message d'aide");
   assertTrue(!app.$("#borrow-dialog").open, "la boîte d'emprunt ne doit pas s'ouvrir");
+});
+
+test("returning a game calls the correct route and updates availability", async () => {
+  let returned = false;
+
+  const activeLoan = {
+    id: "l1",
+    gameID: "g2",
+    memberID: "m1",
+    borrowedAt: new Date().toISOString(),
+    dueAt: new Date().toISOString(),
+    returnedAt: null,
+  };
+
+  const app = await mountApp({
+    "GET /games": () => [
+      returned ? { ...dixit, isAvailable: true } : dixit,
+    ],
+
+    "GET /members": [camille],
+
+    "GET /members/m1/loans": [activeLoan],
+
+    "POST /loans/l1/return": () => {
+      returned = true;
+      return [200, { ...activeLoan, returnedAt: new Date().toISOString() }];
+    },
+  });
+
+  await waitFor(() => app.$$("#games-list .card").length === 1);
+
+  const card = cardOf(app, "Dixit");
+
+  assertIncludes(card.textContent, "Emprunté");
+
+  app.click("Rendre", card);
+
+  // Vérifier que la bonne route est appelée.
+  await waitFor(
+    () => app.calls.some(
+      (call) =>
+        call.method === "POST" &&
+        call.path === "/loans/l1/return"
+    ),
+    "l'appel POST /loans/l1/return"
+  );
+
+  // Vérifier que l'affichage est actualisé.
+  await waitFor(
+    () => cardOf(app, "Dixit")?.textContent.includes("Disponible"),
+    "le jeu devrait devenir disponible"
+  );
+
+  assertTrue(
+    [...cardOf(app, "Dixit").querySelectorAll("button")]
+      .some((button) => button.textContent === "Emprunter"),
+    "le bouton Emprunter devrait réapparaître"
+  );
+
+  assertIncludes(
+    app.$("#toasts").textContent,
+    "Dixit » a bien été rendu"
+  );
+});
+
+test("a failed return is displayed in French", async () => {
+  const activeLoan = {
+    id: "l1",
+    gameID: "g2",
+    memberID: "m1",
+    borrowedAt: new Date().toISOString(),
+    dueAt: new Date().toISOString(),
+    returnedAt: null,
+  };
+
+  const app = await mountApp({
+    "GET /games": [dixit],
+
+    "GET /members": [camille],
+
+    "GET /members/m1/loans": [activeLoan],
+
+    "POST /loans/l1/return": [
+      409,
+      {
+        error: true,
+        reason: "Loan has already been returned",
+      },
+    ],
+  });
+
+  await waitFor(() => app.$$("#games-list .card").length === 1);
+
+  app.click("Rendre", cardOf(app, "Dixit"));
+
+  await waitFor(
+    () => app.calls.some(
+      (call) =>
+        call.method === "POST" &&
+        call.path === "/loans/l1/return"
+    ),
+    "l'appel de retour"
+  );
+
+  await waitFor(
+    () => app.$("#toasts").textContent.includes("Cet emprunt a déjà été rendu."),
+    "le message d'erreur en français"
+  );
+
+  assertIncludes(
+    cardOf(app, "Dixit").textContent,
+    "Emprunté"
+  );
 });
 
 // --- Adhérent·es
