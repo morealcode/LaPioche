@@ -257,6 +257,116 @@ async function returnGame(game) {
   });
 }
 
+// Détermine l'état d'un emprunt.
+function getLoanStatus(loan, now = new Date()) {
+  if (loan.returnedAt != null) {
+    return {
+      label: "Rendu",
+      className: "returned",
+    };
+  }
+
+  if (new Date(loan.dueAt) < now) {
+    return {
+      label: "En retard",
+      className: "overdue",
+    };
+  }
+
+  return {
+    label: "En cours",
+    className: "active",
+  };
+}
+
+// --- Consultation des emprunts d'un·e adhérent·e ----------------------------
+
+const memberLoansDialog = $("#member-loans-dialog");
+const memberLoansList = $("#member-loans-list");
+const memberLoansEmpty = $("#member-loans-empty");
+const memberLoansTitle = $("#member-loans-title");
+const memberLoansError = $("#member-loans-error");
+
+async function openMemberLoans(member) {
+  memberLoansTitle.textContent = `Emprunts de ${member.name}`;
+
+  memberLoansList.replaceChildren();
+  memberLoansEmpty.hidden = true;
+  memberLoansError.hidden = true;
+  memberLoansError.textContent = "";
+
+  memberLoansDialog.showModal();
+
+  try {
+    // Récupérer les emprunts de l'adhérent·e.
+    const loans = await api.listMemberLoans(member.id);
+
+    // Récupérer les jeux pour retrouver leurs titres.
+    const games = await api.listGames();
+
+    const gamesById = new Map(
+      games.map((game) => [game.id, game])
+    );
+
+    // Afficher le message si aucun emprunt n'existe.
+    if (loans.length === 0) {
+      memberLoansEmpty.hidden = false;
+      return;
+    }
+
+    // Construire la liste des emprunts.
+    const rows = loans.map((loan) => {
+      const game = gamesById.get(loan.gameID);
+
+      const gameTitle = game
+        ? game.title
+        : "Jeu introuvable";
+
+      const status = getLoanStatus(loan);
+
+      return el(
+        "li",
+        { class: "loan-row" },
+
+        el(
+          "div",
+          { class: "loan-main" },
+
+          el(
+            "p",
+            { class: "loan-title" },
+            gameTitle
+          ),
+
+          el(
+            "p",
+            { class: "loan-dates" },
+            `Emprunté le : ${formatDate(loan.borrowedAt)}`
+          ),
+
+          el(
+            "p",
+            { class: "loan-dates" },
+            `Retour prévu le : ${formatDate(loan.dueAt)}`
+          )
+        ),
+
+        el(
+          "span",
+          { class: `loan-status ${status.className}` },
+          status.label
+        )
+      );
+    });
+
+    memberLoansList.replaceChildren(...rows);
+
+  } catch (error) {
+    memberLoansError.textContent = error.message;
+    memberLoansError.hidden = false;
+  }
+}
+
 // --- Adhérent·es -----------------------------------------------------------
 
 async function loadMembers() {
@@ -269,20 +379,45 @@ function memberRow(member) {
   const actions = el("div", { class: "actions" });
 
   actions.append(
-    button("Modifier", () => openEditMemberDialog(member)),
-    button("Supprimer", () => openDeleteMemberDialog(member), "danger"),
+    button(
+      "Voir les emprunts",
+      () => openMemberLoans(member)
+    ),
+
+    button(
+      "Modifier",
+      () => openEditMemberDialog(member)
+    ),
+
+    button(
+      "Supprimer",
+      () => openDeleteMemberDialog(member),
+      "danger"
+    )
   );
 
   return el(
     "li",
     { class: "row" },
+
     el(
       "div",
       { class: "row-main" },
-      el("p", {}, el("strong", {}, member.name)),
-      el("p", { class: "meta" }, member.email),
+
+      el(
+        "p",
+        {},
+        el("strong", {}, member.name)
+      ),
+
+      el(
+        "p",
+        { class: "meta" },
+        member.email
+      )
     ),
-    actions,
+
+    actions
   );
 }
 

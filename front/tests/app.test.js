@@ -423,3 +423,105 @@ test("deleting a member asks for confirmation then sends DELETE", async () => {
 
   await waitFor(() => !app.$("#delete-member-dialog").open);
 });
+
+// --- Consultation des emprunts d'un·e adhérent·e
+
+test("a member can view their loans with the three statuses and game titles", async () => {
+  const now = Date.now();
+  const date = (offsetDays) => new Date(now + offsetDays * 24 * 60 * 60 * 1000).toISOString();
+
+  const loans = [
+    {
+      id: "l1",
+      gameID: "g1",
+      memberID: "m1",
+      borrowedAt: date(-10),
+      dueAt: date(-5),
+      returnedAt: date(-4),
+    },
+    {
+      id: "l2",
+      gameID: "g2",
+      memberID: "m1",
+      borrowedAt: date(-2),
+      dueAt: date(5),
+      returnedAt: null,
+    },
+    {
+      id: "l3",
+      gameID: "g3",
+      memberID: "m1",
+      borrowedAt: date(-8),
+      dueAt: date(-1),
+      returnedAt: null,
+    },
+  ];
+
+  const app = await mountApp({
+    "GET /members": [camille],
+    "GET /members/m1/loans": loans,
+    "GET /games": [
+      catan,
+      dixit,
+      {
+        id: "g3",
+        title: "Azul",
+        minPlayers: 2,
+        maxPlayers: 4,
+        durationMinutes: 45,
+        isAvailable: false,
+      },
+    ],
+  }, { hash: "#members" });
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+
+  app.click("Voir les emprunts", app.$("#members-list .row")[0]);
+
+  await waitFor(() => app.$("#member-loans-dialog").open, "la boîte des emprunts");
+  await waitFor(() => app.$$("#member-loans-list .loan-row").length === 3, "les trois emprunts");
+
+  const content = app.$("#member-loans-list").textContent;
+
+  assertIncludes(content, "Catan");
+  assertIncludes(content, "Dixit");
+  assertIncludes(content, "Azul");
+
+  assertIncludes(content, "Rendu");
+  assertIncludes(content, "En cours");
+  assertIncludes(content, "En retard");
+
+  assertTrue(
+    app.calls.some((call) => call.method === "GET" && call.path === "/members/m1/loans"),
+    "la liste des emprunts de Camille devrait être chargée",
+  );
+});
+
+test("viewing a member's loans shows a message when there are none", async () => {
+  const app = await mountApp({
+    "GET /members": [camille],
+    "GET /members/m1/loans": [],
+    "GET /games": [],
+  }, { hash: "#members" });
+
+  await waitFor(() => app.$$("#members-list .row").length === 1);
+
+  app.click("Voir les emprunts", app.$("#members-list .row")[0]);
+
+  await waitFor(() => app.$("#member-loans-dialog").open, "la boîte des emprunts");
+  await waitFor(
+    () => !app.$("#member-loans-empty").hidden,
+    "le message indiquant qu'il n'y a aucun emprunt",
+  );
+
+  assertIncludes(
+    app.$("#member-loans-empty").textContent.toLowerCase(),
+    "aucun emprunt",
+  );
+
+  assertEqual(
+    app.$$("#member-loans-list .loan-row").length,
+    0,
+    "aucun emprunt ne devrait être affiché",
+  );
+});

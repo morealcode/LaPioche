@@ -94,6 +94,22 @@
     </form>
   </dialog>
 
+  <dialog id="member-loans-dialog" class="wide">
+    <h2 id="member-loans-title">Emprunts de l'adhérent·e</h2>
+
+    <p id="member-loans-empty" class="empty" hidden>
+      Cet·te adhérent·e n'a aucun emprunt pour le moment.
+    </p>
+
+    <ul id="member-loans-list" class="rows"></ul>
+
+    <p class="form-error" id="member-loans-error" role="alert" hidden></p>
+
+    <div class="actions">
+      <button type="button" data-cancel>Fermer</button>
+    </div>
+  </dialog>
+
   <dialog id="borrow-dialog">
     <form method="dialog" id="borrow-form">
       <h2 id="borrow-dialog-title"></h2>

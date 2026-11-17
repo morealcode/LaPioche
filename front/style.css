@@ -151,3 +151,59 @@ dialog:not([open]) { display: none; }
 #toasts { position: fixed; right: 16px; bottom: 16px; display: flex; flex-direction: column; gap: 8px; max-width: min(380px, calc(100vw - 32px)); }
 .toast { margin: 0; padding: 10px 14px; border-radius: 8px; background: var(--accent); color: var(--accent-text); box-shadow: 0 4px 16px rgb(0 0 0 / 0.25); }
 .toast.error { background: var(--late); color: var(--bg); }
+
+/* --- Emprunts d'un·e adhérent·e --- */
+
+.loan-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.loan-main {
+  flex: 1;
+  min-width: 200px;
+}
+
+.loan-main p {
+  margin: 0;
+}
+
+.loan-title {
+  font-weight: 600;
+}
+
+.loan-dates {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.loan-status {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.loan-status.returned {
+  color: var(--ok);
+  background: var(--ok-bg);
+}
+
+.loan-status.active {
+  color: var(--busy);
+  background: var(--busy-bg);
+}
+
+.loan-status.overdue {
+  color: var(--late);
+  background: var(--late-bg);
+  font-weight: 600;
+}
