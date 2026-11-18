@@ -207,3 +207,9 @@ dialog:not([open]) { display: none; }
   background: var(--late-bg);
   font-weight: 600;
 }
+
+#games-search .actions {
+  align-self: end;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}

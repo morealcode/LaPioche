@@ -57,6 +57,41 @@ test("with no game, a message invites to add one", async () => {
   assertIncludes(app.$("#games-empty").textContent, "Ajouter un jeu");
 });
 
+
+test("search with no results displays an appropriate message", async () => {
+  const app = await mountApp({
+    "GET /games": [catan],
+    "GET /games?q=Inconnu": [],
+  });
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 1,
+    "le jeu initial devrait être affiché"
+  );
+
+  const searchForm = app.$("#games-search");
+
+  searchForm.elements.q.value = "Inconnu";
+  searchForm.requestSubmit();
+
+  await waitFor(
+    () => !app.$("#games-no-results").hidden,
+    "le message d'absence de résultat"
+  );
+
+  assertIncludes(
+    app.$("#games-no-results").textContent,
+    "Aucun jeu ne correspond à votre recherche"
+  );
+
+  assertEqual(
+    app.$$("#games-list .card").length,
+    0,
+    "aucun jeu ne devrait être affiché"
+  );
+});
+
+
 test("adding a game posts the form then reloads the list", async () => {
   const app = await mountApp({ "GET /games": [catan], "POST /games": [201, { ...catan, id: "g3", title: "Dixit" }] });
   await waitFor(() => app.$$("#games-list .card").length === 1);

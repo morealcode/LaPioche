@@ -110,7 +110,31 @@ async function request(method, path, body) {
 }
 
 export const api = {
-  listGames: () => request("GET", "/games"),
+  listGames: (filters = {}) => {
+    const params = new URLSearchParams();
+
+    if (filters.q?.trim()) {
+      params.set("q", filters.q.trim());
+    }
+
+    if (Number.isInteger(filters.players) && filters.players > 0) {
+      params.set("players", String(filters.players));
+    }
+
+    if (
+      Number.isInteger(filters.maxDuration) &&
+      filters.maxDuration > 0
+    ) {
+      params.set("maxDuration", String(filters.maxDuration));
+    }
+
+    const query = params.toString();
+
+    return request(
+      "GET",
+      `/games${query ? `?${query}` : ""}`
+    );
+  },
   createGame: (game) => request("POST", "/games", game),
   updateGame: (id, game) => request("PUT", `/games/${id}`, game),
   deleteGame: (id) => request("DELETE", `/games/${id}`),

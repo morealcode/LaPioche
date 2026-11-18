@@ -39,6 +39,29 @@ test("listGames calls GET /games", async () => {
   assertEqual(`${calls[0].method} ${calls[0].path}`, "GET /games");
 });
 
+
+test("listGames sends the search filters as URL parameters", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=Catan&players=4&maxDuration=90": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      q: " Catan ",
+      players: 4,
+      maxDuration: 90,
+    })
+  );
+
+  assertEqual(calls[0].method, "GET");
+  assertEqual(calls[0].path, "/games");
+  assertEqual(
+    calls[0].search,
+    "?q=Catan&players=4&maxDuration=90"
+  );
+});
+
+
 test("createGame sends a JSON POST", async () => {
   const { fetch, calls } = fakeApi({ "POST /games": [201, { id: "1" }] });
   const game = { title: "Catan", minPlayers: 3, maxPlayers: 4, durationMinutes: 90 };

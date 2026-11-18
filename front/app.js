@@ -108,9 +108,52 @@ window.addEventListener("hashchange", refresh);
 // --- Jeux ------------------------------------------------------------------
 
 async function loadGames() {
-  const games = await api.listGames();
-  $("#games-empty").hidden = games.length > 0;
+  const filters = getGameSearchFilters();
+  const games = await api.listGames(filters);
+
+  const hasFilters = Object.keys(filters).length > 0;
+
+  $("#games-empty").hidden = true;
+  $("#games-no-results").hidden = true;
+
+  if (games.length === 0) {
+    if (hasFilters) {
+      $("#games-no-results").hidden = false;
+    } else {
+      $("#games-empty").hidden = false;
+    }
+  }
+
   $("#games-list").replaceChildren(...games.map(gameCard));
+}
+
+function getGameSearchFilters() {
+  const form = $("#games-search");
+
+  const q = form.elements.q.value.trim();
+  const playersValue = form.elements.players.value.trim();
+  const durationValue = form.elements.maxDuration.value.trim();
+
+  const filters = {};
+
+  if (q) {
+    filters.q = q;
+  }
+
+  const isPositiveInteger = (value) =>
+    /^[0-9]+$/.test(value) &&
+    Number.isSafeInteger(Number(value)) &&
+    Number(value) > 0;
+
+  if (isPositiveInteger(playersValue)) {
+    filters.players = Number(playersValue);
+  }
+
+  if (isPositiveInteger(durationValue)) {
+    filters.maxDuration = Number(durationValue);
+  }
+
+  return filters;
 }
 
 function gameCard(game) {
@@ -211,6 +254,20 @@ deleteGameForm.addEventListener("submit", async (event) => {
   } catch (error) {
     showFormError(deleteGameDialog, error);
   }
+});
+
+const gamesSearchForm = $("#games-search");
+
+gamesSearchForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  run(loadGames);
+});
+
+gamesSearchForm.addEventListener("reset", () => {
+  // Attendre que le navigateur ait réinitialisé les champs.
+  requestAnimationFrame(() => {
+    run(loadGames);
+  });
 });
 
 // --- Emprunts --------------------------------------------------------------
