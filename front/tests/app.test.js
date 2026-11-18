@@ -57,7 +57,6 @@ test("with no game, a message invites to add one", async () => {
   assertIncludes(app.$("#games-empty").textContent, "Ajouter un jeu");
 });
 
-
 test("search with no results displays an appropriate message", async () => {
   const app = await mountApp({
     "GET /games": [catan],
@@ -90,7 +89,6 @@ test("search with no results displays an appropriate message", async () => {
     "aucun jeu ne devrait être affiché"
   );
 });
-
 
 test("adding a game posts the form then reloads the list", async () => {
   const app = await mountApp({ "GET /games": [catan], "POST /games": [201, { ...catan, id: "g3", title: "Dixit" }] });
@@ -191,6 +189,103 @@ test("a deletion refusal is displayed in French", async () => {
   assertTrue(
     app.$("#delete-game-dialog").open,
     "la boîte de confirmation devrait rester ouverte",
+  );
+});
+
+test("checking available only immediately reloads games with available filter", async () => {
+  let availableOnly = false;
+
+  const app = await mountApp({
+    "GET /games": () =>
+      availableOnly ? [catan] : [catan, dixit],
+
+    "GET /games?available=true": () => {
+      availableOnly = true;
+      return [catan];
+    },
+  });
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2,
+    "les deux jeux devraient être affichés initialement"
+  );
+
+  const checkbox = app.$(
+    '#games-search input[name="available"]'
+  );
+
+  assertTrue(checkbox, "la case de disponibilité devrait exister");
+
+  checkbox.checked = true;
+
+  checkbox.dispatchEvent(
+    new app.win.Event("change", { bubbles: true })
+  );
+
+  await waitFor(
+    () => app.calls.some(
+      (call) =>
+        call.method === "GET" &&
+        call.search === "?available=true"
+    ),
+    "la requête avec available=true devrait être envoyée"
+  );
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 1,
+    "seul le jeu disponible devrait être affiché"
+  );
+
+  assertEqual(
+    cardOf(app, "Catan") !== undefined,
+    true
+  );
+
+  assertEqual(
+    cardOf(app, "Dixit"),
+    undefined
+  );
+});
+
+test("available filter combines with title search in the interface", async () => {
+  const app = await mountApp({
+    "GET /games": [catan, dixit],
+
+    "GET /games?q=Catan&available=true": [catan],
+  });
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 2
+  );
+
+  const form = app.$("#games-search");
+
+  form.elements.q.value = "Catan";
+  form.elements.available.checked = true;
+
+  form.requestSubmit();
+
+  await waitFor(
+    () => app.calls.some(
+      (call) =>
+        call.method === "GET" &&
+        call.search === "?q=Catan&available=true"
+    ),
+    "les deux paramètres devraient être envoyés"
+  );
+
+  await waitFor(
+    () => app.$$("#games-list .card").length === 1
+  );
+
+  assertIncludes(
+    app.$("#games-list").textContent,
+    "Catan"
+  );
+  
+  assertTrue(
+    !app.$("#games-list").textContent.includes("Dixit"),
+    "Dixit ne devrait pas apparaître"
   );
 });
 

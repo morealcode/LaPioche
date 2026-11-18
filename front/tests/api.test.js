@@ -61,6 +61,40 @@ test("listGames sends the search filters as URL parameters", async () => {
   );
 });
 
+test("listGames sends the available filter", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?available=true": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      available: true,
+    })
+  );
+
+  assertEqual(calls[0].search, "?available=true");
+});
+
+test("listGames combines available with other search filters", async () => {
+  const { fetch, calls } = fakeApi({
+    "GET /games?q=Catan&available=true": [],
+  });
+
+  await withFakeFetch(fetch, () =>
+    api.listGames({
+      q: "Catan",
+      available: true,
+    })
+  );
+
+  assertEqual(calls[0].method, "GET");
+  assertEqual(calls[0].path, "/games");
+
+  assertEqual(
+    calls[0].search,
+    "?q=Catan&available=true"
+  );
+});
 
 test("createGame sends a JSON POST", async () => {
   const { fetch, calls } = fakeApi({ "POST /games": [201, { id: "1" }] });

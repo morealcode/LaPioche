@@ -128,6 +128,10 @@ export const api = {
       params.set("maxDuration", String(filters.maxDuration));
     }
 
+    if (filters.available === true) {
+      params.set("available", "true");
+    }
+
     const query = params.toString();
 
     return request(

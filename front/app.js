@@ -153,6 +153,10 @@ function getGameSearchFilters() {
     filters.maxDuration = Number(durationValue);
   }
 
+  if (form.elements.available.checked) {
+    filters.available = true;
+  }
+
   return filters;
 }
 
@@ -260,6 +264,11 @@ const gamesSearchForm = $("#games-search");
 
 gamesSearchForm.addEventListener("submit", (event) => {
   event.preventDefault();
+  run(loadGames);
+});
+
+// Actualiser immédiatement lorsque la disponibilité change.
+gamesSearchForm.elements.available.addEventListener("change", () => {
   run(loadGames);
 });
 
