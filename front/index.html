@@ -18,9 +18,75 @@
       </a>
     </nav>
     <a class="docs-link" id="docs-link" href="http://localhost:8081/">Documentation API</a>
+    <div id="account-area" class="account-area" hidden>
+      <span id="account-email"></span>
+      <button type="button" id="logout-button">Se déconnecter</button>
+    </div>
   </header>
 
   <main>
+    <section id="auth-screen" class="auth-screen">
+      <div class="auth-card">
+        <h2 id="auth-title">Connexion</h2>
+        <p id="auth-description" class="hint">
+          Connectez-vous pour accéder à la ludothèque.
+        </p>
+
+        <form id="login-form" novalidate>
+          <label>
+            Adresse e-mail
+            <input type="email" name="email" autocomplete="email" required>
+          </label>
+
+          <label>
+            Mot de passe
+            <input
+              type="password"
+              name="password"
+              autocomplete="current-password"
+              required
+            >
+          </label>
+
+          <p class="form-error" role="alert" hidden></p>
+
+          <button type="submit" class="primary">Se connecter</button>
+        </form>
+
+        <form id="register-form" novalidate hidden>
+          <label>
+            Adresse e-mail
+            <input type="email" name="email" autocomplete="email" required>
+          </label>
+
+          <label>
+            Mot de passe
+            <input
+              type="password"
+              name="password"
+              autocomplete="new-password"
+              minlength="8"
+              required
+            >
+          </label>
+
+          <p class="hint">Le mot de passe doit contenir au moins 8 caractères.</p>
+          <p class="form-error" role="alert" hidden></p>
+
+          <button type="submit" class="primary">Créer mon compte</button>
+        </form>
+
+        <p id="auth-switch">
+          Pas encore de compte ?
+          <button type="button" id="show-register">Créer un compte</button>
+        </p>
+
+        <p id="auth-switch-login" hidden>
+          Déjà un compte ?
+          <button type="button" id="show-login">Se connecter</button>
+        </p>
+      </div>
+    </section>
     <section id="games" class="tab" hidden>
       <div class="section-head">
         <h2>Jeux</h2>

@@ -1,5 +1,11 @@
 import { API_URL } from "./config.js";
-import { api } from "./api.js";
+import {
+  api,
+  getToken,
+  setToken,
+  clearToken,
+  onUnauthorized,
+} from "./api.js";
 
 const $ = (selector, root = document) => root.querySelector(selector);
 
@@ -661,4 +667,181 @@ deleteMemberForm.addEventListener("submit", async (event) => {
   }
 });
 
-refresh();
+// --- Authentification -----------------------------------------------------
+
+const authScreen = $("#auth-screen");
+const loginForm = $("#login-form");
+const registerForm = $("#register-form");
+const authTitle = $("#auth-title");
+const authDescription = $("#auth-description");
+const authSwitch = $("#auth-switch");
+const authSwitchLogin = $("#auth-switch-login");
+const accountArea = $("#account-area");
+const accountEmail = $("#account-email");
+const logoutButton = $("#logout-button");
+
+let authMode = "login";
+let isAuthenticated = false;
+
+function showAuthError(form, message) {
+  const error = $(".form-error", form);
+  error.textContent = message ?? "";
+  error.hidden = !message;
+}
+
+function showLoginScreen(message = "") {
+  isAuthenticated = false;
+
+  authScreen.hidden = false;
+  accountArea.hidden = true;
+  $("nav", document.querySelector(".topbar")).hidden = true;
+
+  for (const name of tabs) {
+    $(`#${name}`).hidden = true;
+  }
+
+  authMode = "login";
+  loginForm.hidden = false;
+  registerForm.hidden = true;
+
+  authTitle.textContent = "Connexion";
+  authDescription.textContent =
+    "Connectez-vous pour accéder à la ludothèque.";
+
+  authSwitch.hidden = false;
+  authSwitchLogin.hidden = true;
+
+  showAuthError(loginForm, message);
+  showAuthError(registerForm, null);
+}
+
+function showRegisterScreen() {
+  authMode = "register";
+
+  loginForm.hidden = true;
+  registerForm.hidden = false;
+
+  authTitle.textContent = "Créer un compte";
+  authDescription.textContent =
+    "Créez un compte pour accéder à la ludothèque.";
+
+  authSwitch.hidden = true;
+  authSwitchLogin.hidden = false;
+
+  showAuthError(loginForm, null);
+  showAuthError(registerForm, null);
+}
+
+async function showApplication(user) {
+  isAuthenticated = true;
+
+  authScreen.hidden = true;
+  accountArea.hidden = false;
+  $("nav", document.querySelector(".topbar")).hidden = false;
+
+  accountEmail.textContent = user.email;
+
+  await refresh();
+}
+
+function handleUnauthorized() {
+  if (!isAuthenticated) return;
+
+  clearToken();
+  showLoginScreen(
+    "Votre session a expiré ou votre connexion n'est plus valide. Veuillez vous reconnecter."
+  );
+}
+
+onUnauthorized(handleUnauthorized);
+
+$("#show-register").addEventListener("click", showRegisterScreen);
+$("#show-login").addEventListener("click", showLoginScreen);
+
+loginForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  showAuthError(loginForm, null);
+
+  const email = loginForm.elements.email.value.trim();
+  const password = loginForm.elements.password.value;
+
+  try {
+    const result = await api.login({ email, password });
+
+    if (!result?.token || !result?.user) {
+      throw new Error("La réponse du serveur est incomplète.");
+    }
+
+    setToken(result.token);
+    loginForm.reset();
+
+    await showApplication(result.user);
+  } catch (error) {
+    showAuthError(loginForm, error.message);
+  }
+});
+
+registerForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  showAuthError(registerForm, null);
+
+  const email = registerForm.elements.email.value.trim();
+  const password = registerForm.elements.password.value;
+
+  if (password.length < 8) {
+    showAuthError(
+      registerForm,
+      "Le mot de passe doit contenir au moins 8 caractères."
+    );
+    return;
+  }
+
+  try {
+    const result = await api.register({ email, password });
+
+    if (!result?.token || !result?.user) {
+      throw new Error("La réponse du serveur est incomplète.");
+    }
+
+    setToken(result.token);
+    registerForm.reset();
+
+    await showApplication(result.user);
+  } catch (error) {
+    showAuthError(registerForm, error.message);
+  }
+});
+
+logoutButton.addEventListener("click", () => {
+  clearToken();
+
+  loginForm.reset();
+  registerForm.reset();
+
+  showLoginScreen("Vous avez été déconnecté·e.");
+});
+
+// Au rechargement, on vérifie que le jeton conservé dans l'onglet
+// est toujours accepté par le backend.
+async function initializeAuthentication() {
+  const token = getToken();
+
+  if (!token) {
+    showLoginScreen();
+    return;
+  }
+
+  try {
+    const user = await api.me();
+    await showApplication(user);
+  } catch (error) {
+    clearToken();
+    showLoginScreen(
+      error.status === 401
+        ? "Votre session a expiré. Veuillez vous reconnecter."
+        : error.message
+    );
+  }
+}
+
+initializeAuthentication();

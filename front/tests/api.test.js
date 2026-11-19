@@ -1,6 +1,13 @@
-import { api, ApiError, translateError } from "../api.js";
+import {
+  api,
+  ApiError,
+  translateError,
+  getToken,
+  setToken,
+  clearToken,
+} from "../api.js";
 import { assertEqual, assertIncludes, assertTrue, test } from "./runner.js";
-import { fakeApi, withFakeFetch } from "./helpers.js";
+import { fakeApi, withFakeFetch, jsonResponse } from "./helpers.js";
 
 // --- translateError : les messages de l'API deviennent des phrases en français
 
@@ -225,4 +232,134 @@ test("a game already on loan (409) gives a French message", async () => {
   assertTrue(error instanceof ApiError, "l'erreur devrait être une ApiError");
   assertEqual(error.status, 409);
   assertEqual(error.message, "Ce jeu est déjà emprunté : il faut d'abord le rendre.");
+});
+
+test("login stores the JWT returned by the API", async () => {
+  clearToken();
+
+  const { fetch, calls } = fakeApi({
+    "POST /auth/login": {
+      token: "jwt-test-token",
+      expiresAt: "2026-12-01T12:00:00Z",
+      user: {
+        id: "u1",
+        email: "test@example.com",
+        createdAt: null,
+      },
+    },
+  });
+
+  const result = await withFakeFetch(fetch, () =>
+    api.login({
+      email: "test@example.com",
+      password: "password123",
+    })
+  );
+
+  assertEqual(result.token, "jwt-test-token");
+  assertEqual(calls[0].method, "POST");
+  assertEqual(calls[0].path, "/auth/login");
+  assertEqual(calls[0].body, {
+    email: "test@example.com",
+    password: "password123",
+  });
+
+  assertEqual(getToken(), null);
+  clearToken();
+});
+
+test("protected requests send the JWT in the Authorization header", async () => {
+  setToken("jwt-test-token");
+
+  let authorization = null;
+
+  const fetch = async (_input, init = {}) => {
+    authorization = new Headers(init.headers).get("Authorization");
+    return jsonResponse(200, []);
+  };
+
+  await withFakeFetch(fetch, () => api.listGames());
+
+  assertEqual(authorization, "Bearer jwt-test-token");
+  clearToken();
+});
+
+test("login does not send an existing JWT", async () => {
+  setToken("old-token");
+
+  let authorization = null;
+
+  const fetch = async (_input, init = {}) => {
+    authorization = new Headers(init.headers).get("Authorization");
+
+    return jsonResponse(200, {
+      token: "new-token",
+      expiresAt: "2026-12-01T12:00:00Z",
+      user: {
+        id: "u1",
+        email: "test@example.com",
+        createdAt: null,
+      },
+    });
+  };
+
+  await withFakeFetch(fetch, () =>
+    api.login({
+      email: "test@example.com",
+      password: "password123",
+    })
+  );
+
+  assertEqual(authorization, null);
+  clearToken();
+});
+
+test("a protected request receiving 401 clears the JWT", async () => {
+  setToken("expired-token");
+
+  const { fetch } = fakeApi({
+    "GET /games": [
+      401,
+      { error: true, reason: "Unauthorized" },
+    ],
+  });
+
+  try {
+    await withFakeFetch(fetch, () => api.listGames());
+  } catch (error) {
+    assertEqual(error.status, 401);
+  }
+
+  assertEqual(getToken(), null);
+});
+
+test("registration sends the email and password", async () => {
+  const { fetch, calls } = fakeApi({
+    "POST /auth/register": [
+      201,
+      {
+        token: "new-token",
+        expiresAt: "2026-12-01T12:00:00Z",
+        user: {
+          id: "u1",
+          email: "new@example.com",
+          createdAt: null,
+        },
+      },
+    ],
+  });
+
+  const result = await withFakeFetch(fetch, () =>
+    api.register({
+      email: "new@example.com",
+      password: "password123",
+    })
+  );
+
+  assertEqual(result.token, "new-token");
+  assertEqual(calls[0].path, "/auth/register");
+  assertEqual(calls[0].body, {
+    email: "new@example.com",
+    password: "password123",
+  });
 });

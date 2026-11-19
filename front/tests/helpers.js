@@ -54,16 +54,24 @@ export async function withFakeFetch(fetchStub, action) {
 // Charge la vraie page index.html dans un iframe, branchée sur une fausse API.
 // Renvoie { win, doc, $, calls, click, type }.
 export async function mountApp(routes, { hash = "" } = {}) {
-  const api = fakeApi(routes);
+  const api = fakeApi({
+    "GET /auth/me": {
+      id: "test-user",
+      email: "test@example.com",
+      createdAt: null,
+    },
+    ...routes,
+  });
   const pageURL = new URL("../index.html", import.meta.url);
   const html = await (await fetch(pageURL)).text();
 
   // Avant app.js : on remplace fetch et on choisit l'onglet affiché.
   const prelude = `<base href="${pageURL.href}">
-    <script>
-      window.fetch = window.parent.__fakeFetch;
-      history.replaceState(null, "", "${hash}" || location.pathname);
-    <\/script>`;
+  <script>
+    window.fetch = window.parent.__fakeFetch;
+    sessionStorage.setItem("la-pioche-token", "test-token");
+    history.replaceState(null, "", "${hash}" || location.pathname);
+  <\/script>`;
 
   const frame = document.createElement("iframe");
   frame.dataset.testFrame = "true";

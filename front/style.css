@@ -213,3 +213,80 @@ dialog:not([open]) { display: none; }
   justify-content: flex-start;
   flex-wrap: wrap;
 }
+
+/* --- Authentification --------------------------------------------------- */
+
+.account-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  font-size: 0.9rem;
+}
+
+.account-area[hidden] {
+  display: none;
+}
+
+.auth-screen {
+  max-width: 440px;
+  margin: 48px auto;
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.auth-card h2 {
+  margin: 0;
+}
+
+.auth-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.auth-card form[hidden],
+.auth-screen[hidden] {
+  display: none;
+}
+
+.auth-card button[type="submit"] {
+  width: 100%;
+}
+
+#auth-switch,
+#auth-switch-login {
+  margin: 0;
+  color: var(--muted);
+  text-align: center;
+}
+
+#auth-switch button,
+#auth-switch-login button {
+  border: 0;
+  padding: 0 2px;
+  color: var(--accent);
+  text-decoration: underline;
+  background: transparent;
+}
+
+#auth-switch[hidden],
+#auth-switch-login[hidden] {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .account-area {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-between;
+  }
+}
