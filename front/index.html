@@ -1,266 +1,693 @@
+
 <!DOCTYPE html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+
   <title>La Pioche - Ludothèque</title>
+
+  <!-- Bootstrap 5.3.8 -->
+  <link
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css"
+    rel="stylesheet"
+    integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB"
+    crossorigin="anonymous"
+  >
+
+  <script>
+    (() => {
+      const savedTheme = localStorage.getItem("theme");
+
+      const theme = savedTheme || "light";
+
+      document.documentElement.setAttribute("data-bs-theme", theme);
+    })();
+  </script>
+
+  <!-- Personnalisations propres à La Pioche -->
   <link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <header class="topbar">
-    <h1>La Pioche</h1>
-    <nav aria-label="Sections">
-      <a href="#games" data-tab="games">Jeux</a>
-      <a href="#members" data-tab="members">Adhérent·es</a>
-      <a href="#overdue" data-tab="overdue">
-        Retards
-        <span id="overdue-count" class="count" aria-label="Nombre d'emprunts en retard">0</span>
+
+  <!-- Navigation -->
+  <header class="topbar navbar navbar-expand-lg bg-body-tertiary border-bottom">
+    <div class="container-fluid flex-wrap gap-2">
+
+      <a class="navbar-brand fw-bold" href="#">
+        La Pioche
       </a>
-    </nav>
-    <a class="docs-link" id="docs-link" href="http://localhost:8081/">Documentation API</a>
-    <div id="account-area" class="account-area" hidden>
-      <span id="account-email"></span>
-      <button type="button" id="logout-button">Se déconnecter</button>
+
+      <nav class="nav flex-wrap" aria-label="Sections">
+        <a class="nav-link" href="#games" data-tab="games">
+          Jeux
+        </a>
+
+        <a class="nav-link" href="#members" data-tab="members">
+          Adhérent·es
+        </a>
+
+        <a class="nav-link" href="#overdue" data-tab="overdue">
+          Retards
+          <span
+            id="overdue-count"
+            class="badge text-bg-danger"
+            aria-label="Nombre d'emprunts en retard"
+          >0</span>
+        </a>
+      </nav>
+
+      <a
+        class="btn btn-outline-secondary btn-sm"
+        id="docs-link"
+        href="http://localhost:8081/"
+      >
+        Documentation API
+      </a>
+
+      <button
+        id="theme-toggle"
+        class="btn btn-outline-secondary btn-sm"
+        type="button"
+        aria-label="Activer le thème sombre"
+        aria-pressed="false"
+      >
+        🌙 Thème sombre
+      </button>
+      
+      <div
+        id="account-area"
+        class="account-area d-flex align-items-center gap-2"
+        hidden
+      >
+        <span id="account-email"></span>
+
+        <button
+          type="button"
+          id="logout-button"
+          class="btn btn-outline-danger btn-sm"
+        >
+          Se déconnecter
+        </button>
+      </div>
+
     </div>
   </header>
 
-  <main>
+  <main class="container">
+
+    <!-- Authentification -->
     <section id="auth-screen" class="auth-screen">
-      <div class="auth-card">
-        <h2 id="auth-title">Connexion</h2>
-        <p id="auth-description" class="hint">
-          Connectez-vous pour accéder à la ludothèque.
-        </p>
+      <div class="auth-card card shadow-sm">
 
-        <form id="login-form" novalidate>
-          <label>
-            Adresse e-mail
-            <input type="email" name="email" autocomplete="email" required>
-          </label>
+        <div class="card-body">
 
-          <label>
-            Mot de passe
-            <input
-              type="password"
-              name="password"
-              autocomplete="current-password"
-              required
+          <h2 id="auth-title" class="h4 mb-2">
+            Connexion
+          </h2>
+
+          <p id="auth-description" class="text-secondary mb-4">
+            Connectez-vous pour accéder à la ludothèque.
+          </p>
+
+          <!-- Connexion -->
+          <form id="login-form" novalidate>
+
+            <div class="mb-3">
+              <label for="login-email" class="form-label">
+                Adresse e-mail
+              </label>
+
+              <input
+                id="login-email"
+                type="email"
+                name="email"
+                class="form-control"
+                autocomplete="email"
+                required
+              >
+            </div>
+
+            <div class="mb-3">
+              <label for="login-password" class="form-label">
+                Mot de passe
+              </label>
+
+              <input
+                id="login-password"
+                type="password"
+                name="password"
+                class="form-control"
+                autocomplete="current-password"
+                required
+              >
+            </div>
+
+            <p class="form-error alert alert-danger" role="alert" hidden></p>
+
+            <button type="submit" class="btn btn-primary w-100">
+              Se connecter
+            </button>
+
+          </form>
+
+          <!-- Inscription -->
+          <form id="register-form" novalidate hidden>
+
+            <div class="mb-3">
+              <label for="register-email" class="form-label">
+                Adresse e-mail
+              </label>
+
+              <input
+                id="register-email"
+                type="email"
+                name="email"
+                class="form-control"
+                autocomplete="email"
+                required
+              >
+            </div>
+
+            <div class="mb-3">
+              <label for="register-password" class="form-label">
+                Mot de passe
+              </label>
+
+              <input
+                id="register-password"
+                type="password"
+                name="password"
+                class="form-control"
+                autocomplete="new-password"
+                minlength="8"
+                required
+              >
+            </div>
+
+            <p class="text-secondary small">
+              Le mot de passe doit contenir au moins 8 caractères.
+            </p>
+
+            <p class="form-error alert alert-danger" role="alert" hidden></p>
+
+            <button type="submit" class="btn btn-primary w-100">
+              Créer mon compte
+            </button>
+
+          </form>
+
+          <p id="auth-switch" class="text-secondary text-center mt-4 mb-0">
+            Pas encore de compte ?
+
+            <button
+              type="button"
+              id="show-register"
+              class="btn btn-link p-0"
             >
-          </label>
+              Créer un compte
+            </button>
+          </p>
 
-          <p class="form-error" role="alert" hidden></p>
+          <p id="auth-switch-login" class="text-secondary text-center mt-4 mb-0" hidden>
+            Déjà un compte ?
 
-          <button type="submit" class="primary">Se connecter</button>
-        </form>
-
-        <form id="register-form" novalidate hidden>
-          <label>
-            Adresse e-mail
-            <input type="email" name="email" autocomplete="email" required>
-          </label>
-
-          <label>
-            Mot de passe
-            <input
-              type="password"
-              name="password"
-              autocomplete="new-password"
-              minlength="8"
-              required
+            <button
+              type="button"
+              id="show-login"
+              class="btn btn-link p-0"
             >
-          </label>
+              Se connecter
+            </button>
+          </p>
 
-          <p class="hint">Le mot de passe doit contenir au moins 8 caractères.</p>
-          <p class="form-error" role="alert" hidden></p>
-
-          <button type="submit" class="primary">Créer mon compte</button>
-        </form>
-
-        <p id="auth-switch">
-          Pas encore de compte ?
-          <button type="button" id="show-register">Créer un compte</button>
-        </p>
-
-        <p id="auth-switch-login" hidden>
-          Déjà un compte ?
-          <button type="button" id="show-login">Se connecter</button>
-        </p>
+        </div>
       </div>
     </section>
+
+    <!-- Jeux -->
     <section id="games" class="tab" hidden>
+
       <div class="section-head">
-        <h2>Jeux</h2>
-        <button type="button" id="add-game" class="primary">Ajouter un jeu</button>
+        <h2 class="h3">Jeux</h2>
+
+        <button
+          type="button"
+          id="add-game"
+          class="btn btn-primary"
+        >
+          Ajouter un jeu
+        </button>
       </div>
-      <form id="games-search" class="filters">
-        <label>
-          Rechercher un jeu
-          <input
-            type="search"
-            name="q"
-            placeholder="Titre du jeu"
-          >
-        </label>
 
-        <label>
-          Nombre de joueur·ses
-          <input
-            type="number"
-            name="players"
-            min="1"
-            step="1"
-            placeholder="Ex. 4"
-          >
-        </label>
+      <!-- Recherche et filtres -->
+      <form id="games-search" class="filters card card-body mb-3">
 
-        <label>
-          Durée maximale (minutes)
-          <input
-            type="number"
-            name="maxDuration"
-            min="1"
-            step="1"
-            placeholder="Ex. 60"
-          >
-        </label>
+        <div class="row g-3 align-items-end">
 
-        <label>
-          <input type="checkbox" name="available">
-          Disponibles uniquement
-        </label>
+          <div class="col-12 col-md-6">
+            <label for="games-query" class="form-label">
+              Rechercher un jeu
+            </label>
 
-        <div class="actions">
-          <button type="submit" class="primary">Rechercher</button>
-          <button type="reset">Réinitialiser</button>
+            <input
+              id="games-query"
+              type="search"
+              name="q"
+              class="form-control"
+              placeholder="Titre du jeu"
+            >
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label for="games-players" class="form-label">
+              Nombre de joueur·ses
+            </label>
+
+            <input
+              id="games-players"
+              type="number"
+              name="players"
+              class="form-control"
+              min="1"
+              step="1"
+              placeholder="Ex. 4"
+            >
+          </div>
+
+          <div class="col-12 col-md-6">
+            <label for="games-duration" class="form-label">
+              Durée maximale (minutes)
+            </label>
+
+            <input
+              id="games-duration"
+              type="number"
+              name="maxDuration"
+              class="form-control"
+              min="1"
+              step="1"
+              placeholder="Ex. 60"
+            >
+          </div>
+
+          <div class="col-12 col-md-6">
+            <div class="form-check">
+              <input
+                id="games-available"
+                type="checkbox"
+                name="available"
+                class="form-check-input"
+              >
+
+              <label for="games-available" class="form-check-label">
+                Disponibles uniquement
+              </label>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="actions d-flex flex-wrap gap-2">
+              <button type="submit" class="btn btn-primary">
+                Rechercher
+              </button>
+
+              <button type="reset" class="btn btn-outline-secondary">
+                Réinitialiser
+              </button>
+            </div>
+          </div>
+
         </div>
       </form>
 
-      <p id="games-empty" class="empty" hidden>
+      <p id="games-empty" class="empty alert alert-info" hidden>
         La ludothèque ne contient aucun jeu pour le moment.
         Cliquez sur « Ajouter un jeu » pour créer le premier.
       </p>
 
-      <p id="games-no-results" class="empty" hidden>
+      <p id="games-no-results" class="empty alert alert-warning" hidden>
         Aucun jeu ne correspond à votre recherche.
         Essayez de modifier vos filtres.
       </p>
-      <p id="games-empty" class="empty" hidden>La ludothèque ne contient aucun jeu pour le moment. Cliquez sur « Ajouter un jeu » pour créer le premier.</p>
-      <ul id="games-list" class="cards"></ul>
+
+      <ul id="games-list" class="cards row g-3"></ul>
+
     </section>
 
+    <!-- Adhérent·es -->
     <section id="members" class="tab" hidden>
+
       <div class="section-head">
-        <h2>Adhérent·es</h2>
-        <button type="button" id="add-member" class="primary">Ajouter un·e adhérent·e</button>
+        <h2 class="h3">Adhérent·es</h2>
+
+        <button
+          type="button"
+          id="add-member"
+          class="btn btn-primary"
+        >
+          Ajouter un·e adhérent·e
+        </button>
       </div>
-      <p id="members-empty" class="empty" hidden>Aucun·e adhérent·e pour le moment. Cliquez sur « Ajouter un·e adhérent·e » pour créer le premier ou la première.</p>
-      <ul id="members-list" class="rows"></ul>
+
+      <p id="members-empty" class="empty alert alert-info" hidden>
+        Aucun·e adhérent·e pour le moment.
+        Cliquez sur « Ajouter un·e adhérent·e » pour créer le premier ou la première.
+      </p>
+
+      <ul id="members-list" class="rows list-group"></ul>
+
     </section>
 
+    <!-- Retards -->
     <section id="overdue" class="tab" hidden>
+
       <div class="section-head">
-        <h2>Emprunts en retard</h2>
+        <h2 class="h3">Emprunts en retard</h2>
       </div>
 
-      <p id="overdue-empty" class="empty" hidden>
+      <p id="overdue-empty" class="empty alert alert-success" hidden>
         Aucun emprunt en retard. Tous les jeux sont à jour !
       </p>
 
-      <ul id="overdue-list" class="rows"></ul>
+      <ul id="overdue-list" class="rows list-group"></ul>
+
     </section>
+
   </main>
 
+  <!-- Ajouter / modifier un jeu -->
   <dialog id="game-dialog">
     <form method="dialog" id="game-form" novalidate>
-      <h2>Ajouter un jeu</h2>
-      <label>Titre <input name="title" required></label>
+
+      <h2 class="h4">Ajouter un jeu</h2>
+
+      <div>
+        <label for="game-title" class="form-label">
+          Titre
+        </label>
+
+        <input
+          id="game-title"
+          name="title"
+          class="form-control"
+          required
+        >
+      </div>
+
       <div class="pair">
-        <label>Joueur·ses min <input type="number" name="minPlayers" min="1" step="1" required></label>
-        <label>Joueur·ses max <input type="number" name="maxPlayers" min="1" step="1" required></label>
+
+        <div>
+          <label for="game-min-players" class="form-label">
+            Joueur·ses min
+          </label>
+
+          <input
+            id="game-min-players"
+            type="number"
+            name="minPlayers"
+            class="form-control"
+            min="1"
+            step="1"
+            required
+          >
+        </div>
+
+        <div>
+          <label for="game-max-players" class="form-label">
+            Joueur·ses max
+          </label>
+
+          <input
+            id="game-max-players"
+            type="number"
+            name="maxPlayers"
+            class="form-control"
+            min="1"
+            step="1"
+            required
+          >
+        </div>
+
       </div>
-      <label>Durée (minutes) <input type="number" name="durationMinutes" min="1" step="1" required></label>
-      <p class="form-error" role="alert" hidden></p>
+
+      <div>
+        <label for="game-duration" class="form-label">
+          Durée (minutes)
+        </label>
+
+        <input
+          id="game-duration"
+          type="number"
+          name="durationMinutes"
+          class="form-control"
+          min="1"
+          step="1"
+          required
+        >
+      </div>
+
+      <p class="form-error alert alert-danger" role="alert" hidden></p>
+
       <div class="actions">
-        <button type="button" data-cancel>Annuler</button>
-        <button type="submit" class="primary">Enregistrer</button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          data-cancel
+        >
+          Annuler
+        </button>
+
+        <button type="submit" class="btn btn-primary">
+          Enregistrer
+        </button>
       </div>
+
     </form>
   </dialog>
 
+  <!-- Supprimer un jeu -->
   <dialog id="delete-game-dialog">
     <form method="dialog" id="delete-game-form" novalidate>
-      <h2>Supprimer un jeu</h2>
+
+      <h2 class="h4">Supprimer un jeu</h2>
+
       <p id="delete-game-message"></p>
 
-      <p class="form-error" role="alert" hidden></p>
+      <p class="form-error alert alert-danger" role="alert" hidden></p>
 
       <div class="actions">
-        <button type="button" data-cancel>Annuler</button>
-        <button type="submit" class="danger">Supprimer</button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          data-cancel
+        >
+          Annuler
+        </button>
+
+        <button type="submit" class="btn btn-danger">
+          Supprimer
+        </button>
       </div>
+
     </form>
   </dialog>
 
+  <!-- Ajouter / modifier un·e adhérent·e -->
   <dialog id="member-dialog">
     <form method="dialog" id="member-form" novalidate>
-      <h2>Ajouter un·e adhérent·e</h2>
-      <label>Nom <input name="name" required></label>
-      <label>Adresse e-mail <input type="email" name="email" required></label>
-      <p class="form-error" role="alert" hidden></p>
-      <div class="actions">
-        <button type="button" data-cancel>Annuler</button>
-        <button type="submit" class="primary">Enregistrer</button>
+
+      <h2 class="h4">Ajouter un·e adhérent·e</h2>
+
+      <div>
+        <label for="member-name" class="form-label">
+          Nom
+        </label>
+
+        <input
+          id="member-name"
+          name="name"
+          class="form-control"
+          required
+        >
       </div>
+
+      <div>
+        <label for="member-email" class="form-label">
+          Adresse e-mail
+        </label>
+
+        <input
+          id="member-email"
+          type="email"
+          name="email"
+          class="form-control"
+          required
+        >
+      </div>
+
+      <p class="form-error alert alert-danger" role="alert" hidden></p>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          data-cancel
+        >
+          Annuler
+        </button>
+
+        <button type="submit" class="btn btn-primary">
+          Enregistrer
+        </button>
+      </div>
+
     </form>
   </dialog>
 
+  <!-- Supprimer un·e adhérent·e -->
   <dialog id="delete-member-dialog">
     <form method="dialog" id="delete-member-form" novalidate>
-      <h2>Supprimer un·e adhérent·e</h2>
+
+      <h2 class="h4">Supprimer un·e adhérent·e</h2>
+
       <p id="delete-member-message"></p>
 
-      <p class="form-error" role="alert" hidden></p>
+      <p class="form-error alert alert-danger" role="alert" hidden></p>
 
       <div class="actions">
-        <button type="button" data-cancel>Annuler</button>
-        <button type="submit" class="danger">Supprimer</button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          data-cancel
+        >
+          Annuler
+        </button>
+
+        <button type="submit" class="btn btn-danger">
+          Supprimer
+        </button>
       </div>
+
     </form>
   </dialog>
 
+  <!-- Emprunts d'un·e adhérent·e -->
   <dialog id="member-loans-dialog" class="wide">
-    <h2 id="member-loans-title">Emprunts de l'adhérent·e</h2>
 
-    <p id="member-loans-empty" class="empty" hidden>
+    <h2 id="member-loans-title" class="h4">
+      Emprunts de l'adhérent·e
+    </h2>
+
+    <p id="member-loans-empty" class="empty alert alert-info" hidden>
       Cet·te adhérent·e n'a aucun emprunt pour le moment.
     </p>
 
-    <ul id="member-loans-list" class="rows"></ul>
+    <ul id="member-loans-list" class="rows list-group"></ul>
 
-    <p class="form-error" id="member-loans-error" role="alert" hidden></p>
+    <p
+      class="form-error alert alert-danger"
+      id="member-loans-error"
+      role="alert"
+      hidden
+    ></p>
 
     <div class="actions">
-      <button type="button" data-cancel>Fermer</button>
+      <button
+        type="button"
+        class="btn btn-outline-secondary"
+        data-cancel
+      >
+        Fermer
+      </button>
     </div>
+
   </dialog>
 
+  <!-- Emprunter un jeu -->
   <dialog id="borrow-dialog">
     <form method="dialog" id="borrow-form">
-      <h2 id="borrow-dialog-title"></h2>
-      <label>Adhérent·e
-        <select name="memberID" required></select>
-      </label>
-      <p class="hint">Retour prévu dans 14 jours.</p>
-      <p class="form-error" role="alert" hidden></p>
-      <div class="actions">
-        <button type="button" data-cancel>Annuler</button>
-        <button type="submit" class="primary">Emprunter</button>
+
+      <h2 id="borrow-dialog-title" class="h4"></h2>
+
+      <div>
+        <label for="borrow-member" class="form-label">
+          Adhérent·e
+        </label>
+
+        <select
+          id="borrow-member"
+          name="memberID"
+          class="form-select"
+          required
+        ></select>
       </div>
+
+      <p class="text-secondary small mb-0">
+        Retour prévu dans 14 jours.
+      </p>
+
+      <p class="form-error alert alert-danger" role="alert" hidden></p>
+
+      <div class="actions">
+        <button
+          type="button"
+          class="btn btn-outline-secondary"
+          data-cancel
+        >
+          Annuler
+        </button>
+
+        <button type="submit" class="btn btn-primary">
+          Emprunter
+        </button>
+      </div>
+
     </form>
   </dialog>
 
+  <!-- Notifications -->
   <div id="toasts" role="status" aria-live="polite"></div>
 
+  <!-- Application -->
   <script type="module" src="app.js"></script>
+
+  <!-- Application theme -->
+  <script>
+    (() => {
+      const button = document.querySelector("#theme-toggle");
+      if (!button) return;
+
+      function updateThemeButton(theme) {
+        const isDark = theme === "dark";
+
+        button.textContent = isDark ? "☀️ Thème clair" : "🌙 Thème sombre";
+        button.setAttribute(
+          "aria-label",
+          isDark ? "Activer le thème clair" : "Activer le thème sombre"
+        );
+        button.setAttribute("aria-pressed", String(isDark));
+      }
+
+      const initialTheme =
+        document.documentElement.getAttribute("data-bs-theme") || "light";
+
+      updateThemeButton(initialTheme);
+
+      button.addEventListener("click", () => {
+        const currentTheme =
+          document.documentElement.getAttribute("data-bs-theme") || "light";
+
+        const nextTheme = currentTheme === "dark" ? "light" : "dark";
+
+        document.documentElement.setAttribute("data-bs-theme", nextTheme);
+        localStorage.setItem("theme", nextTheme);
+
+        updateThemeButton(nextTheme);
+      });
+    })();
+  </script>
 </body>
 </html>
